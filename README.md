@@ -1,0 +1,1 @@
+Just started creating directory structure for my project which is a "Scalable ECommerce Platform"
