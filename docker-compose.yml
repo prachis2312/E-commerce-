@@ -1,12 +1,10 @@
-
-
 services:
   postgres:
     image: postgres:16
     container_name: ecommerce-postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 231205
+      POSTGRES_PASSWORD: postgres123
       POSTGRES_DB: user_service_db
     ports:
       - "5433:5432"
@@ -21,7 +19,7 @@ services:
     ports:
       - "8001:8001"
     environment:
-      DATABASE_URL: postgresql://postgres:231205@postgres:5432/user_service_db
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/user_service_db
       SECRET_KEY: your-secret-key-change-this-later
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
@@ -30,8 +28,35 @@ services:
     networks:
       - ecommerce-network
 
+  product-postgres:
+    image: postgres:16
+    container_name: product-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: product_service_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - product_postgres_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-network
+
+  product-service:
+    build: ./services/product-service
+    container_name: product-service
+    ports:
+      - "8002:8002"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres123@product-postgres:5432/product_service_db
+    depends_on:
+      - product-postgres
+    networks:
+      - ecommerce-network
+
 volumes:
   postgres_data:
+  product_postgres_data:
 
 networks:
   ecommerce-network:
