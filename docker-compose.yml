@@ -54,9 +54,40 @@ services:
     networks:
       - ecommerce-network
 
+  cart-postgres:
+    image: postgres:16
+    container_name: cart-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: cart_service_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - cart_postgres_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-network
+
+  cart-service:
+    build: ./services/cart-service
+    container_name: cart-service
+    ports:
+      - "8003:8003"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres123@cart-postgres:5432/cart_service_db
+      SECRET_KEY: your-secret-key-change-this-later
+      ALGORITHM: HS256
+      PRODUCT_SERVICE_URL: http://product-service:8002
+    depends_on:
+      - cart-postgres
+      - product-service
+    networks:
+      - ecommerce-network
+
 volumes:
   postgres_data:
   product_postgres_data:
+  cart_postgres_data:
 
 networks:
   ecommerce-network:
