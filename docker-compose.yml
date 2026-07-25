@@ -84,10 +84,43 @@ services:
     networks:
       - ecommerce-network
 
+  order-postgres:
+    image: postgres:16
+    container_name: order-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: order_service_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - order_postgres_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-network
+
+  order-service:
+    build: ./services/order-service
+    container_name: order-service
+    ports:
+      - "8004:8004"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres123@order-postgres:5432/order_service_db
+      SECRET_KEY: your-secret-key-change-this-later
+      ALGORITHM: HS256
+      PRODUCT_SERVICE_URL: http://product-service:8002
+      CART_SERVICE_URL: http://cart-service:8003
+    depends_on:
+      - order-postgres
+      - product-service
+      - cart-service
+    networks:
+      - ecommerce-network
+
 volumes:
   postgres_data:
   product_postgres_data:
   cart_postgres_data:
+  order_postgres_data:
 
 networks:
   ecommerce-network:
