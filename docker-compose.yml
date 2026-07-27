@@ -116,11 +116,42 @@ services:
     networks:
       - ecommerce-network
 
+  recommendation-postgres:
+    image: postgres:16
+    container_name: recommendation-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: recommendation_service_db
+    ports:
+      - "5437:5432"
+    volumes:
+      - recommendation_postgres_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-network
+
+  recommendation-service:
+    build: ./services/recommendation-service
+    container_name: recommendation-service
+    ports:
+      - "8005:8005"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres123@recommendation-postgres:5432/recommendation_service_db
+      PRODUCT_SERVICE_URL: http://product-service:8002
+      ORDER_SERVICE_URL: http://order-service:8004
+    depends_on:
+      - recommendation-postgres
+      - product-service
+      - order-service
+    networks:
+      - ecommerce-network
+
 volumes:
   postgres_data:
   product_postgres_data:
   cart_postgres_data:
   order_postgres_data:
+  recommendation_postgres_data:
 
 networks:
   ecommerce-network:
