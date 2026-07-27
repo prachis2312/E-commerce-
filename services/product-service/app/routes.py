@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 from app.database import get_db
 from app.models import Product, Category
+from app.auth import require_admin
 from app.schemas import (
     ProductCreate, ProductUpdate, ProductResponse,
     CategoryCreate, CategoryResponse
@@ -13,7 +14,7 @@ router = APIRouter()
 # ---- Category routes ----
 
 @router.post("/categories", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
-def create_category(category: CategoryCreate, db: Session = Depends(get_db)):
+def create_category(category: CategoryCreate, db: Session = Depends(get_db),admin: dict = Depends(require_admin)):
     existing = db.query(Category).filter(Category.name == category.name).first()
     if existing:
         raise HTTPException(status_code=400, detail="Category already exists")
@@ -30,7 +31,7 @@ def list_categories(db: Session = Depends(get_db)):
 # ---- Product routes ----
 
 @router.post("/products", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
-def create_product(product: ProductCreate, db: Session = Depends(get_db)):
+def create_product(product: ProductCreate, db: Session = Depends(get_db),admin: dict = Depends(require_admin)):
     new_product = Product(**product.model_dump())
     db.add(new_product)
     db.commit()
@@ -63,7 +64,7 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
     return product
 
 @router.put("/products/{product_id}", response_model=ProductResponse)
-def update_product(product_id: int, updates: ProductUpdate, db: Session = Depends(get_db)):
+def update_product(product_id: int, updates: ProductUpdate, db: Session = Depends(get_db),admin: dict = Depends(require_admin)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -77,7 +78,7 @@ def update_product(product_id: int, updates: ProductUpdate, db: Session = Depend
     return product
 
 @router.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_product(product_id: int, db: Session = Depends(get_db)):
+def delete_product(product_id: int, db: Session = Depends(get_db),admin: dict = Depends(require_admin)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")

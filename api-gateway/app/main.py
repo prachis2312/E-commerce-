@@ -2,8 +2,22 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import Response
 import httpx
 from app.config import SERVICE_ROUTES
+from fastapi.middleware.cors import CORSMiddleware
+import os
 
 app = FastAPI(title="API Gateway", version="1.0.0")
+
+ALLOWED_ORIGINS=os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ... rest of your existing routes (health check, proxy route)
 
 
 @app.get("/health")

@@ -177,13 +177,11 @@ If PostgreSQL is already installed natively on your machine (default port 5432),
 |---|---|---|---|
 | GET | `/products` | List products (filter by category/price, paginated) | No |
 | GET | `/products/{id}` | Product details | No |
-| POST | `/products` | Create product | No* |
-| PUT | `/products/{id}` | Update product | No* |
-| DELETE | `/products/{id}` | Delete product | No* |
+| POST | `/products` | Create product | Yes (admin only) |
+| PUT | `/products/{id}` | Update product | Yes (admin only) |
+| DELETE | `/products/{id}` | Delete product | Yes (admin only) |
 | GET | `/categories` | List categories | No |
-| POST | `/categories` | Create category | No* |
-
-\* *Admin-only authorization was deprioritized given project timeline; see Design Decisions.*
+| POST | `/categories` | Create category | Yes (admin only) |
 
 ### Cart Service
 | Method | Endpoint | Description | Auth |
@@ -234,7 +232,7 @@ The recommendation system uses **content-based filtering**, chosen over collabor
 - **Payment processing is simulated** via a mock function with a ~95% success rate, structured so a real gateway (e.g., Stripe test mode) could be substituted without changing the surrounding checkout logic.
 - **Price/name snapshotting:** Cart and Order line items store the product's price (and, for orders, name) at the time of the transaction, rather than referencing live product data — ensuring cart totals don't silently change if prices update, and order history remains accurate even if a product is later renamed or removed from the catalog.
 - **JWT token forwarding:** Order Service and Recommendation Service forward the user's original JWT to Cart Service and Order Service respectively, rather than maintaining separate service-to-service credentials — allowing downstream services to independently verify identity using a shared secret key.
-- **No admin authorization on Product Service write routes:** Deprioritized given project timeline; a production system would restrict product creation/editing to admin users via a role check on the decoded JWT.
+- **Admin authorization via JWT claims:** Product Service's write routes (`POST`/`PUT`/`DELETE /products`, `POST /categories`) require an `is_admin` claim embedded in the JWT at login, verified independently by Product Service using the same shared secret as User Service — avoiding an extra network call to check permissions on every request. The tradeoff: revoking a user's admin status doesn't take effect until their current token expires, since the claim is baked into the token at issuance. A production system might mitigate this with shorter token lifetimes or a token-revocation list.
 - **No API Gateway (yet):** Each service is currently accessed directly on its own port. A gateway (e.g., a lightweight FastAPI router or Kong/Traefik) would consolidate this into a single entry point in a production deployment.
 - **Manual table creation vs. migrations:** Tables are created via one-off scripts (`create_tables.py`). A production system would use Alembic for versioned schema migrations.
 - **Service discovery:** Not implemented; services communicate via fixed hostnames defined in Docker Compose's internal network, sufficient at this scale. Consul/Eureka would be used for dynamic service discovery at larger scale.
@@ -246,9 +244,11 @@ The recommendation system uses **content-based filtering**, chosen over collabor
 - [x] Cart Service — cart management, stock validation
 - [x] Order Service — checkout orchestration, buy-now, simulated payments
 - [x] Recommendation Service — content-based filtering, personalization, cold-start handling
-- [ ] API Gateway
-- [ ] Admin authorization on Product Service
+- [x] API Gateway — lightweight FastAPI reverse proxy
+- [x] Admin authorization on Product Service (JWT `is_admin` claim)
 - [ ] CI/CD pipeline (GitHub Actions)
+- [ ] Frontend (React)
+- [ ] Deployment (frontend on Vercel; backend demoed locally/via video)
 - [ ] Collaborative filtering (stretch goal, via implicit-feedback ALS)
 
 ## Author

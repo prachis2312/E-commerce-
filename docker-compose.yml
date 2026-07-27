@@ -49,6 +49,8 @@ services:
       - "8002:8002"
     environment:
       DATABASE_URL: postgresql://postgres:postgres123@product-postgres:5432/product_service_db
+      SECRET_KEY: your-secret-key-change-this-later
+      ALGORITHM: HS256
     depends_on:
       - product-postgres
     networks:
