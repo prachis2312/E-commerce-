@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, status
 from sqlalchemy.orm import Session
 from typing import Optional, List
+import os
 from app.database import get_db
 from app.models import Product, Category
 from app.auth import require_admin
 from app.schemas import (
     ProductCreate, ProductUpdate, ProductResponse,
-    CategoryCreate, CategoryResponse
+    CategoryCreate, CategoryResponse, StockUpdate
 )
 
 router = APIRouter()
@@ -20,7 +21,7 @@ def create_category(category: CategoryCreate, db: Session = Depends(get_db),admi
         raise HTTPException(status_code=400, detail="Category already exists")
     new_category = Category(**category.model_dump())
     db.add(new_category)
-    db.commit()
+    db.commit() 
     db.refresh(new_category)
     return new_category
 
@@ -73,6 +74,25 @@ def update_product(product_id: int, updates: ProductUpdate, db: Session = Depend
     for field, value in update_data.items():
         setattr(product, field, value)
 
+    db.commit()
+    db.refresh(product)
+    return product
+
+@router.patch("/products/{product_id}/stock", response_model=ProductResponse)
+def adjust_stock(
+    product_id: int,
+    update: StockUpdate,
+    x_internal_key: str = Header(...),
+    db: Session = Depends(get_db)
+):
+    if x_internal_key != os.getenv("INTERNAL_API_KEY"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    product.stock_quantity = update.stock_quantity
     db.commit()
     db.refresh(product)
     return product

@@ -51,6 +51,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres123@product-postgres:5432/product_service_db
       SECRET_KEY: your-secret-key-change-this-later
       ALGORITHM: HS256
+      INTERNAL_API_KEY: some-long-random-string-here
     depends_on:
       - product-postgres
     networks:
@@ -109,6 +110,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres123@order-postgres:5432/order_service_db
       SECRET_KEY: your-secret-key-change-this-later
       ALGORITHM: HS256
+      INTERNAL_API_KEY: some-long-random-string-here
       PRODUCT_SERVICE_URL: http://product-service:8002
       CART_SERVICE_URL: http://cart-service:8003
     depends_on:

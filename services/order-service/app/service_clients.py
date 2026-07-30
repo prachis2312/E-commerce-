@@ -2,10 +2,12 @@ import httpx
 import os
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 PRODUCT_SERVICE_URL = os.getenv("PRODUCT_SERVICE_URL", "http://product-service:8002")
 CART_SERVICE_URL = os.getenv("CART_SERVICE_URL", "http://cart-service:8003")
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
 
 
 async def get_product(product_id: int):
@@ -21,12 +23,13 @@ async def get_product(product_id: int):
 
 
 async def update_product_stock(product_id: int, new_stock_quantity: int) -> bool:
-    """Decrement (or set) a product's stock via product-service."""
+    """Decrement (or set) a product's stock via product-service's internal stock route."""
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.put(
-                f"{PRODUCT_SERVICE_URL}/products/{product_id}",
+            response = await client.patch(
+                f"{PRODUCT_SERVICE_URL}/products/{product_id}/stock",
                 json={"stock_quantity": new_stock_quantity},
+                headers={"x-internal-key": INTERNAL_API_KEY},
                 timeout=5.0
             )
             return response.status_code == 200

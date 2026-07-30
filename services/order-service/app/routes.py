@@ -52,7 +52,12 @@ async def create_order_from_items(db: Session, user_id: int, items_data: list, p
 
     for item in items_data:
         new_stock = item["current_stock"] - item["quantity"]
-        await update_product_stock(item["product_id"], new_stock)
+        success = await update_product_stock(item["product_id"], new_stock)
+        if not success:
+            # Order and payment already committed at this point — we don't want to
+            # roll back the whole order over a stock-sync issue, but we do want
+            # this visible in logs rather than silently vanishing.
+            print(f"WARNING: failed to update stock for product {item['product_id']}")
 
     db.refresh(new_order)
     return new_order

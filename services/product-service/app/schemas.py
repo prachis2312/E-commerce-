@@ -45,3 +45,6 @@ class ProductResponse(ProductBase):
 
     class Config:
         from_attributes = True
+
+class StockUpdate(BaseModel):
+    stock_quantity: int
