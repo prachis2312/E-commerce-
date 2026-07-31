@@ -53,7 +53,7 @@ def seed_manual_products():
             "description": "High-precision wireless gaming mouse with RGB lighting and programmable buttons",
             "price": 45.99,
             "stock_quantity": 30,
-            "image_url": "https://via.placeholder.com/300?text=Gaming+Mouse",
+            "image_url": "https://placehold.co/300x300?text=Gaming+Mouse",
             "category": "Electronics"
         },
         {
@@ -61,7 +61,7 @@ def seed_manual_products():
             "description": "Compact mechanical keyboard with blue switches, ideal for typing and gaming",
             "price": 79.99,
             "stock_quantity": 25,
-            "image_url": "https://via.placeholder.com/300?text=Keyboard",
+            "image_url": "https://placehold.co/300x300?text=Keyboard",
             "category": "Electronics"
         },
         {
@@ -69,7 +69,7 @@ def seed_manual_products():
             "description": "Over-ear wireless headphones with active noise cancellation and 30-hour battery life",
             "price": 129.99,
             "stock_quantity": 20,
-            "image_url": "https://via.placeholder.com/300?text=Headphones",
+            "image_url": "https://placehold.co/300x300?text=Headphones",
             "category": "Electronics"
         },
         {
@@ -77,7 +77,7 @@ def seed_manual_products():
             "description": "Compact waterproof speaker with deep bass and 12-hour playtime",
             "price": 34.99,
             "stock_quantity": 40,
-            "image_url": "https://via.placeholder.com/300?text=Speaker",
+            "image_url": "https://placehold.co/300x300?text=Speaker",
             "category": "Electronics"
         },
         {
@@ -85,7 +85,7 @@ def seed_manual_products():
             "description": "Tracks heart rate, sleep, and steps with a 7-day battery life",
             "price": 59.99,
             "stock_quantity": 35,
-            "image_url": "https://via.placeholder.com/300?text=Smartwatch",
+            "image_url": "https://placehold.co/300x300?text=Smartwatch",
             "category": "Electronics"
         },
         {
@@ -93,7 +93,7 @@ def seed_manual_products():
             "description": "Soft cotton-blend hoodie, relaxed fit, available in multiple colors",
             "price": 29.99,
             "stock_quantity": 60,
-            "image_url": "https://via.placeholder.com/300?text=Hoodie",
+            "image_url": "https://placehold.co/300x300?text=Hoodie",
             "category": "Men'S Clothing"
         },
         {
@@ -101,7 +101,7 @@ def seed_manual_products():
             "description": "Stretchable slim-fit denim jeans, mid-rise, everyday wear",
             "price": 39.99,
             "stock_quantity": 45,
-            "image_url": "https://via.placeholder.com/300?text=Jeans",
+            "image_url": "https://placehold.co/300x300?text=Jeans",
             "category": "Men'S Clothing"
         },
         {
@@ -109,7 +109,7 @@ def seed_manual_products():
             "description": "Lightweight breathable sneakers, ideal for daily casual wear",
             "price": 49.99,
             "stock_quantity": 30,
-            "image_url": "https://via.placeholder.com/300?text=Sneakers",
+            "image_url": "https://placehold.co/300x300?text=Sneakers",
             "category": "Men'S Clothing"
         },
         {
@@ -117,7 +117,7 @@ def seed_manual_products():
             "description": "Lightweight floral print dress, perfect for casual summer outings",
             "price": 34.99,
             "stock_quantity": 40,
-            "image_url": "https://via.placeholder.com/300?text=Summer+Dress",
+            "image_url": "https://placehold.co/300x300?text=Summer+Dress",
             "category": "Women'S Clothing"
         },
         {
@@ -125,7 +125,7 @@ def seed_manual_products():
             "description": "Classic denim jacket with button closure, versatile everyday layering piece",
             "price": 44.99,
             "stock_quantity": 25,
-            "image_url": "https://via.placeholder.com/300?text=Denim+Jacket",
+            "image_url": "https://placehold.co/300x300?text=Denim+Jacket",
             "category": "Women'S Clothing"
         },
         {
@@ -133,7 +133,7 @@ def seed_manual_products():
             "description": "High-waisted stretch leggings designed for yoga and everyday activewear",
             "price": 24.99,
             "stock_quantity": 55,
-            "image_url": "https://via.placeholder.com/300?text=Leggings",
+            "image_url": "https://placehold.co/300x300?text=Leggings",
             "category": "Women'S Clothing"
         },
     ]

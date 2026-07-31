@@ -83,6 +83,7 @@ async def recommendations_for_user(
     results = get_recommendations_for_vector(user_vector, exclude_ids=set(purchased_product_ids), top_n=top_n)
 
     recommendations = []
+    seen_ids = set(purchased_product_ids)
     for pid, score in results:
         product = await get_product(pid)
         if product:
@@ -90,5 +91,27 @@ async def recommendations_for_user(
                 product_id=pid, name=product["name"], price=product["price"],
                 image_url=product.get("image_url"), similarity_score=round(float(score), 4)
             ))
+            seen_ids.add(pid)
 
-    return RecommendationResponse(recommendations=recommendations, source="user_history")
+    source = "user_history"
+
+    # If confident matches (above the similarity threshold) weren't enough
+    # to fill top_n, top up with general fallback products rather than
+    # showing a sparse or empty list. Padded items are clearly marked with
+    # similarity_score 0.0, so real vs. fallback recommendations stay
+    # distinguishable in the response.
+    if len(recommendations) < top_n:
+        source = "user_history_with_fallback" if recommendations else "cold_start_fallback"
+        all_products = await get_all_products()
+        for p in all_products:
+            if len(recommendations) >= top_n:
+                break
+            if p["id"] in seen_ids:
+                continue
+            recommendations.append(SimilarProduct(
+                product_id=p["id"], name=p["name"], price=p["price"],
+                image_url=p.get("image_url"), similarity_score=0.0
+            ))
+            seen_ids.add(p["id"])
+
+    return RecommendationResponse(recommendations=recommendations, source=source)
