@@ -156,6 +156,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      ALLOWED_ORIGINS: "http://localhost:5173,https://e-commerce-tau-sepia-91.vercel.app"
       USER_SERVICE_URL: http://user-service:8001
       PRODUCT_SERVICE_URL: http://product-service:8002
       CART_SERVICE_URL: http://cart-service:8003

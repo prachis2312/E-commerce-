@@ -4,6 +4,7 @@ import httpx
 from app.config import SERVICE_ROUTES
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from starlette.middleware.base import BaseHTTPMiddleware
 
 app = FastAPI(title="API Gateway", version="1.0.0")
 
@@ -16,6 +17,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class PrivateNetworkAccessMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        if request.headers.get("access-control-request-private-network") == "true":
+            response.headers["Access-Control-Allow-Private-Network"] = "true"
+        return response
+
+app.add_middleware(PrivateNetworkAccessMiddleware)
 
 # ... rest of your existing routes (health check, proxy route)
 
