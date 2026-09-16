@@ -1,9 +1,11 @@
 import httpx
 import os
 from dotenv import load_dotenv
+import logging
 
 
 load_dotenv()
+logger = logging.getLogger(__name__);
 
 PRODUCT_SERVICE_URL = os.getenv("PRODUCT_SERVICE_URL", "http://product-service:8002")
 CART_SERVICE_URL = os.getenv("CART_SERVICE_URL", "http://cart-service:8003")
@@ -22,18 +24,50 @@ async def get_product(product_id: int):
             return None
 
 
-async def update_product_stock(product_id: int, new_stock_quantity: int) -> bool:
-    """Decrement (or set) a product's stock via product-service's internal stock route."""
+async def reserve_stock(product_id: int, quantity: int) -> dict:
+    """
+    Atomically reserves (decrements) stock via product-service's
+    internal-key-protected endpoint. Returns a dict indicating success
+    and, on failure, the reason (so the caller can surface a clean error
+    rather than a generic one).
+    """
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.patch(
-                f"{PRODUCT_SERVICE_URL}/products/{product_id}/stock",
-                json={"stock_quantity": new_stock_quantity},
+            response = await client.post(
+                f"{PRODUCT_SERVICE_URL}/products/{product_id}/reserve-stock",
+                json={"quantity": quantity},
+                headers={"x-internal-key": INTERNAL_API_KEY},
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                return {"success": True}
+            else:
+                # product-service returns a 400 with a clear detail message
+                # when there isn't enough stock — surface that instead of
+                # a generic failure.
+                detail = response.json().get("detail", "Could not reserve stock")
+                return {"success": False, "detail": detail}
+        except httpx.RequestError as e:
+            return {"success": False, "detail": f"Could not reach product-service: {e}"}
+
+
+async def release_stock(product_id: int, quantity: int) -> bool:
+    """
+    Compensating action: releases previously reserved stock back to
+    product-service. Used when a reservation succeeded but a later step
+    (payment) failed.
+    """
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                f"{PRODUCT_SERVICE_URL}/products/{product_id}/release-stock",
+                json={"quantity": quantity},
                 headers={"x-internal-key": INTERNAL_API_KEY},
                 timeout=5.0
             )
             return response.status_code == 200
-        except httpx.RequestError:
+        except httpx.RequestError as e:
+            logger.warning(f"Failed to release stock for product {product_id}: {e}")
             return False
 
 

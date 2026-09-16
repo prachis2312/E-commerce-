@@ -7,7 +7,8 @@ from app.models import Product, Category
 from app.auth import require_admin
 from app.schemas import (
     ProductCreate, ProductUpdate, ProductResponse,
-    CategoryCreate, CategoryResponse, StockUpdate
+    CategoryCreate, CategoryResponse, StockUpdate,
+    StockReserveRequest, StockReleaseRequest
 )
 
 router = APIRouter()
@@ -96,6 +97,66 @@ def adjust_stock(
     db.commit()
     db.refresh(product)
     return product
+
+@router.post("/products/{product_id}/reserve-stock")
+def reserve_stock(
+    product_id: int,
+    request: StockReserveRequest,
+    x_internal_key: str = Header(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Atomically checks and decrements stock in one database transaction.
+    Uses SELECT ... FOR UPDATE to lock the row, so concurrent requests
+    for the same product_id are forced to wait and see the updated
+    stock value, rather than racing on a stale read.
+    """
+    if x_internal_key != os.getenv("INTERNAL_API_KEY"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    product = db.query(Product).filter(Product.id == product_id).with_for_update().first()
+
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    if product.stock_quantity < request.quantity:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Only {product.stock_quantity} units available in stock"
+        )
+
+    product.stock_quantity -= request.quantity
+    db.commit()
+    db.refresh(product)
+
+    return {"success": True, "remaining_stock": product.stock_quantity}
+
+
+@router.post("/products/{product_id}/release-stock")
+def release_stock(
+    product_id: int,
+    request: StockReleaseRequest,
+    x_internal_key: str = Header(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Compensating action: adds quantity back to stock.
+    Called when a reservation succeeded but a later step (payment)
+    failed, so the reserved stock needs to be returned.
+    """
+    if x_internal_key != os.getenv("INTERNAL_API_KEY"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    product = db.query(Product).filter(Product.id == product_id).with_for_update().first()
+
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    product.stock_quantity += request.quantity
+    db.commit()
+    db.refresh(product)
+
+    return {"success": True, "remaining_stock": product.stock_quantity}
 
 @router.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_product(product_id: int, db: Session = Depends(get_db),admin: dict = Depends(require_admin)):

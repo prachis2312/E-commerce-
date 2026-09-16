@@ -48,3 +48,9 @@ class ProductResponse(ProductBase):
 
 class StockUpdate(BaseModel):
     stock_quantity: int
+
+class StockReserveRequest(BaseModel):
+    quantity: int
+
+class StockReleaseRequest(BaseModel):
+    quantity: int

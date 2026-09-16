@@ -4,10 +4,6 @@ const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
-// Runs before every request this instance sends.
-// Reads the JWT from sessionStorage and attaches it as a Bearer token,
-// so individual API files (auth.js, products.js, etc.) never have to
-// handle auth headers themselves.
 apiClient.interceptors.request.use((config) => {
   const token = sessionStorage.getItem("token");
   if (token) {
@@ -15,5 +11,17 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// NEW: catch any 401 response globally, log the user out, and redirect
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      sessionStorage.removeItem("token");
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default apiClient;

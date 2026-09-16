@@ -21,10 +21,15 @@ function ProductDetail() {
 
   const navigate = useNavigate();
   const [buyingNow, setBuyingNow] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+
+
+
+
 
   const handleBuyNow = () => {
     navigate("/checkout", {
-      state: { buyNowProduct: { product, quantity: 1 } },
+      state: { buyNowProduct: { product, quantity } },
     });
   };
 
@@ -46,7 +51,7 @@ function ProductDetail() {
     setAddError("");
     setAdding(true);
     try {
-      await addItem(product.id, 1);
+      await addItem(product.id, quantity);
     } catch (err) {
       if (err.response && err.response.data && err.response.data.detail) {
         setAddError(err.response.data.detail);
@@ -64,32 +69,49 @@ function ProductDetail() {
 
   return (
     <div>
-      <Link to="/products">← Back to Products</Link>
+    <Link to="/products">← Back to Products</Link>
 
-      <div style={{ display: "flex", gap: "2rem", marginTop: "1rem" }}>
-        {product.image_url && (
-          <img src={product.image_url} alt={product.name} style={{ width: "300px", objectFit: "contain" }} />
-        )}
-        <div>
-          <h2>{product.name}</h2>
-          <p>{product.category ? product.category.name : "Uncategorized"}</p>
-          <p><strong>₹{product.price}</strong></p>
-          <p style={{ color: product.stock_quantity > 0 ? "green" : "red" }}>
-            {product.stock_quantity > 0 ? `In stock (${product.stock_quantity})` : "Out of stock"}
-          </p>
-          <p>{product.description}</p>
+    <div style={{ display: "flex", gap: "2rem", marginTop: "1rem" }}>
+      {product.image_url && (
+        <img src={product.image_url} alt={product.name} style={{ width: "300px", objectFit: "contain" }} />
+      )}
+      <div>
+        <h2>{product.name}</h2>
+        <p>{product.category ? product.category.name : "Uncategorized"}</p>
+        <p><strong>₹{product.price}</strong></p>
+        <p style={{ color: product.stock_quantity > 0 ? "green" : "red" }}>
+          {product.stock_quantity > 0 ? `In stock (${product.stock_quantity})` : "Out of stock"}
+        </p>
+        <p>{product.description}</p>
 
-          <button onClick={handleAddToCart} disabled={product.stock_quantity === 0 || adding}>
-            {adding ? "Adding..." : "Add to Cart"}
-          </button>
-          <button onClick={handleBuyNow} disabled={product.stock_quantity === 0} style={{ marginLeft: "0.5rem" }}>
-            Buy Now
-          </button>
-          {addError && <p style={{ color: "red" }}>{addError}</p>}
+        <div style={{ margin: "0.5rem 0" }}>
+          <label>
+            Quantity:{" "}
+            <input
+              type="number"
+              min="1"
+              max={product.stock_quantity}
+              value={quantity}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 1;
+                setQuantity(Math.min(Math.max(val, 1), product.stock_quantity));
+              }}
+              style={{ width: "60px" }}
+            />
+          </label>
         </div>
-      </div>
 
-      {similar.length > 0 && (
+        <button onClick={handleAddToCart} disabled={product.stock_quantity === 0 || adding}>
+          {adding ? "Adding..." : "Add to Cart"}
+        </button>
+        <button onClick={handleBuyNow} disabled={product.stock_quantity === 0} style={{ marginLeft: "0.5rem" }}>
+          Buy Now
+        </button>
+        {addError && <p style={{ color: "red" }}>{addError}</p>}
+      </div>
+    </div>
+
+    {similar.length > 0 && (
         <div style={{ marginTop: "2rem" }}>
           <h3>Similar Products</h3>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>

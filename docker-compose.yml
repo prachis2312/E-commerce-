@@ -141,6 +141,8 @@ services:
       - "8005:8005"
     environment:
       DATABASE_URL: postgresql://postgres:postgres123@recommendation-postgres:5432/recommendation_service_db
+      SECRET_KEY: your-secret-key-change-this-later
+      ALGORITHM: HS256
       PRODUCT_SERVICE_URL: http://product-service:8002
       ORDER_SERVICE_URL: http://order-service:8004
     depends_on:

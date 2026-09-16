@@ -6,7 +6,7 @@ from app.models import Order, OrderItem, OrderStatus, PaymentStatus
 from app.schemas import BuyNowRequest, CheckoutRequest, OrderResponse, OrderStatusUpdate
 from app.auth import get_current_user
 from app.payment import process_payment
-from app.service_clients import get_product, update_product_stock, get_user_cart, clear_user_cart
+from app.service_clients import get_product, reserve_stock, release_stock, get_user_cart, clear_user_cart
 
 router = APIRouter()
 
@@ -15,19 +15,33 @@ async def create_order_from_items(db: Session, user_id: int, items_data: list, p
     if not items_data:
         raise HTTPException(status_code=400, detail="No items to order")
 
+    # Step 1: Reserve stock for every item, atomically, one at a time.
+    # If any item fails, release everything reserved so far in this loop
+    # before failing — otherwise a partial reservation would silently
+    # hold stock hostage for an order that never completes.
+    reserved_items = []
     for item in items_data:
-        if item["quantity"] > item["current_stock"]:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Insufficient stock for {item['product_name']}. Only {item['current_stock']} available."
-            )
+        result = await reserve_stock(item["product_id"], item["quantity"])
+        if not result["success"]:
+            for reserved in reserved_items:
+                await release_stock(reserved["product_id"], reserved["quantity"])
+            raise HTTPException(status_code=400, detail=result["detail"])
+        reserved_items.append({"product_id": item["product_id"], "quantity": item["quantity"]})
 
+    # Step 2: Process payment — now happening AFTER reservation, not before.
     total_amount = sum(item["price"] * item["quantity"] for item in items_data)
     payment_result = process_payment(total_amount, payment_method)
 
     if not payment_result["success"]:
+        # Payment failed after stock was already reserved — release it all
+        # back, since no order will be created.
+        for reserved in reserved_items:
+            await release_stock(reserved["product_id"], reserved["quantity"])
         raise HTTPException(status_code=402, detail=payment_result["message"])
 
+    # Step 3: Payment succeeded — create the order. Stock is already
+    # correctly decremented from Step 1, so no separate decrement step
+    # is needed here anymore.
     new_order = Order(
         user_id=user_id,
         status=OrderStatus.confirmed,
@@ -49,17 +63,8 @@ async def create_order_from_items(db: Session, user_id: int, items_data: list, p
         )
         db.add(order_item)
     db.commit()
-
-    for item in items_data:
-        new_stock = item["current_stock"] - item["quantity"]
-        success = await update_product_stock(item["product_id"], new_stock)
-        if not success:
-            # Order and payment already committed at this point — we don't want to
-            # roll back the whole order over a stock-sync issue, but we do want
-            # this visible in logs rather than silently vanishing.
-            print(f"WARNING: failed to update stock for product {item['product_id']}")
-
     db.refresh(new_order)
+
     return new_order
 
 

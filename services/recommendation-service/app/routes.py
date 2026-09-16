@@ -11,15 +11,19 @@ from app.similarity import (
 )
 from app.service_clients import get_product, get_user_order_history, get_all_products
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from app.auth import require_admin
 
 router = APIRouter()
 bearer_scheme = HTTPBearer()
 
 
 @router.post("/recommendations/refresh", response_model=RefreshResponse)
-async def refresh(db: Session = Depends(get_db)):
+async def refresh(
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin)   # NEW — only admins can trigger this now
+):
     count = await refresh_embeddings(db)
-    load_cache_from_db(db)  # reload the in-memory cache after updating
+    load_cache_from_db(db)
     return RefreshResponse(embeddings_processed=count, message="Embeddings refreshed successfully")
 
 
