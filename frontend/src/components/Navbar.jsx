@@ -3,12 +3,12 @@ import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 
 function Navbar() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isAdmin, logout } = useAuth();
   const { itemCount } = useCart();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
 
@@ -19,6 +19,7 @@ function Navbar() {
         <>
           <Link to="/cart">Cart ({itemCount})</Link>
           <Link to="/orders">Orders</Link>
+          {isAdmin && <Link to="/admin">Admin</Link>}
           <button onClick={handleLogout}>Logout</button>
         </>
       ) : (

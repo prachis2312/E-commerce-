@@ -19,13 +19,17 @@ function Login() {
 
     try {
       const response = await loginUser(email, password);
-      const { access_token } = response.data;
+      const { access_token, refresh_token } = response.data;
+      login(access_token, refresh_token);
 
-      // We don't have full user info yet (login only returns the token),
-      // so we pass null for now — /auth/me can populate this later if needed.
-      login(access_token); // was: login(access_token, null)
-
-      navigate("/products");
+      // Admins land on the admin dashboard, everyone else on the shop.
+      let isAdmin = false;
+      try {
+        isAdmin = JSON.parse(atob(access_token.split(".")[1])).is_admin;
+      } catch {
+        // ignore: fall back to the normal landing page
+      }
+      navigate(isAdmin ? "/admin" : "/products");
     } catch (err) {
       // FastAPI's HTTPException puts the message in err.response.data.detail
       if (err.response && err.response.data && err.response.data.detail) {

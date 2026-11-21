@@ -283,3 +283,36 @@ The recommendation system uses **content-based filtering**, chosen over collabor
 ## Author
 
 Prachi Saxena
+
+---
+
+## Sessions, Admin & Testing (latest update)
+
+### Sessions: access token + rotating refresh token
+- `POST /auth/login` returns a **15-minute access token** (JWT) and a **7-day refresh token** (random string, stored only as a SHA-256 hash in the `refresh_tokens` table).
+- When an API call returns 401, the frontend's axios interceptor silently calls `POST /auth/refresh`, receives a new pair, and retries the original request. The user is only sent to `/login` if the refresh token itself is expired or revoked.
+- **Rotation + reuse detection:** every refresh revokes the old token. If an already-used token is presented again, all of that user's sessions are revoked.
+- `POST /auth/logout` revokes the refresh token on the server (logout is real, not just local).
+- Verification stays on the backend: each service still validates the JWT signature and expiry itself.
+
+### Admin
+- Make a user admin once: `docker exec -it ecommerce-postgres psql -U postgres -d user_service_db -c "UPDATE users SET is_admin = true WHERE email = 'you@example.com';"`
+- Log in normally; admins are sent to `/admin` where they can add/edit/delete products, change stock and add categories. Authorization is enforced by the backend (`require_admin` -> 403); the UI route guard is only a convenience.
+
+### Seeding the catalog
+`docker compose exec product-service python seed_products.py` (idempotent, 100+ products in 9 categories). Then refresh embeddings with an admin token: `POST /api/recommendations/recommendations/refresh`.
+
+### Tests
+```bash
+# backend unit/integration tests (SQLite, no Docker needed)
+pip install -r requirements-dev.txt
+cd services/user-service && python -m pytest tests -q
+cd ../product-service && python -m pytest tests -q
+
+# frontend tests (refresh-token interceptor)
+cd frontend && npm test
+
+# end-to-end smoke test against the running stack (includes a 10-buyer concurrency test)
+ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=... python scripts/smoke_test.py
+```
+
