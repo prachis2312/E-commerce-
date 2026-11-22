@@ -38,51 +38,35 @@ function Register() {
   };
 
   return (
-    <div>
-      <h2>Register</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="username">Username</label>
-          <input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-
-        {error && <p style={{ color: "red" }}>{error}</p>}
-        {success && <p style={{ color: "green" }}>Account created! Redirecting to login...</p>}
-
-        <button type="submit" disabled={loading}>
-          {loading ? "Creating account..." : "Register"}
-        </button>
-      </form>
-
-      <p>
-        Already have an account? <Link to="/login">Login here</Link>
-      </p>
+    <div className="page page-narrow">
+      <div className="panel auth-card">
+        <h2>Create your account</h2>
+        {error && <div className="alert alert-error" role="alert">{error}</div>}
+        {success && <div className="alert alert-success" role="status">Account created. Taking you to log in...</div>}
+        <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label htmlFor="username">Username</label>
+            <input id="username" className="input" type="text" autoComplete="username"
+              value={username} onChange={(e) => setUsername(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label htmlFor="email">Email</label>
+            <input id="email" className="input" type="email" autoComplete="email"
+              value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label htmlFor="password">Password</label>
+            <input id="password" className="input" type="password" autoComplete="new-password"
+              value={password} onChange={(e) => setPassword(e.target.value)} required />
+          </div>
+          <button type="submit" className="btn btn-primary btn-block" disabled={loading || success}>
+            {loading ? "Creating account..." : "Sign up"}
+          </button>
+        </form>
+        <p className="auth-footer">
+          Already have an account? <Link to="/login">Log in</Link>
+        </p>
+      </div>
     </div>
   );
 }

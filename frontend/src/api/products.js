@@ -1,8 +1,9 @@
 import apiClient from "./client";
 
-export const getProducts = ({ categoryId, minPrice, maxPrice, skip = 0, limit = 20 } = {}) => {
+export const getProducts = ({ q, categoryId, minPrice, maxPrice, skip = 0, limit = 20 } = {}) => {
   return apiClient.get("/products/products", {
     params: {
+      q: q || undefined,
       category_id: categoryId,
       min_price: minPrice,
       max_price: maxPrice,

@@ -43,40 +43,29 @@ function Login() {
   };
 
   return (
-    <div>
-      <h2>Login</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-
-        {error && <p style={{ color: "red" }}>{error}</p>}
-
-        <button type="submit" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
-      </form>
-
-      <p>
-        Don't have an account? <Link to="/register">Register here</Link>
-      </p>
+    <div className="page page-narrow">
+      <div className="panel auth-card">
+        <h2>Log in</h2>
+        {error && <div className="alert alert-error" role="alert">{error}</div>}
+        <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label htmlFor="email">Email</label>
+            <input id="email" className="input" type="email" autoComplete="email"
+              value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label htmlFor="password">Password</label>
+            <input id="password" className="input" type="password" autoComplete="current-password"
+              value={password} onChange={(e) => setPassword(e.target.value)} required />
+          </div>
+          <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+            {loading ? "Logging in..." : "Log in"}
+          </button>
+        </form>
+        <p className="auth-footer">
+          New here? <Link to="/register">Create an account</Link>
+        </p>
+      </div>
     </div>
   );
 }

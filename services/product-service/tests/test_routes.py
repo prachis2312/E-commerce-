@@ -155,3 +155,75 @@ def test_failed_create_does_not_notify(client, user_headers, monkeypatch):
     monkeypatch.setattr("app.routes.notify_recommendations", lambda: calls.append(1))
     client.post("/products", json=PRODUCT, headers=user_headers)  # 403
     assert calls == []
+
+
+# ---------- search ----------
+
+def seed_search_data(client, admin_headers):
+    kitchen = client.post("/categories", json={"name": "Home & Kitchen"}, headers=admin_headers).json()
+    sports = client.post("/categories", json={"name": "Sports"}, headers=admin_headers).json()
+    create_product(client, admin_headers, name="Yoga Mat Non-Slip", description="6 mm mat for stretching",
+                   category_id=sports["id"])
+    create_product(client, admin_headers, name="Door Mat", description="Rubber doormat for the entrance",
+                   category_id=kitchen["id"])
+    create_product(client, admin_headers, name="Electric Kettle", description="Boils water fast",
+                   category_id=kitchen["id"])
+    create_product(client, admin_headers, name="100% Cotton Towel", description="Soft towel", category_id=None)
+    return kitchen, sports
+
+
+def names(resp):
+    return sorted(p["name"] for p in resp.json())
+
+
+def test_search_matches_name_case_insensitive(client, admin_headers):
+    seed_search_data(client, admin_headers)
+    assert names(client.get("/products", params={"q": "KETTLE"})) == ["Electric Kettle"]
+
+
+def test_search_matches_description(client, admin_headers):
+    seed_search_data(client, admin_headers)
+    assert names(client.get("/products", params={"q": "boils"})) == ["Electric Kettle"]
+
+
+def test_search_matches_category_name(client, admin_headers):
+    seed_search_data(client, admin_headers)
+    assert names(client.get("/products", params={"q": "sports"})) == ["Yoga Mat Non-Slip"]
+
+
+def test_search_multiple_words_must_all_match(client, admin_headers):
+    seed_search_data(client, admin_headers)
+    assert names(client.get("/products", params={"q": "yoga mat"})) == ["Yoga Mat Non-Slip"]
+    assert len(client.get("/products", params={"q": "mat"}).json()) == 2
+
+
+def test_search_no_results(client, admin_headers):
+    seed_search_data(client, admin_headers)
+    assert client.get("/products", params={"q": "zzzz"}).json() == []
+
+
+def test_blank_search_returns_everything(client, admin_headers):
+    seed_search_data(client, admin_headers)
+    assert len(client.get("/products", params={"q": "   "}).json()) == 4
+
+
+def test_search_wildcards_are_treated_literally(client, admin_headers):
+    seed_search_data(client, admin_headers)
+    assert client.get("/products", params={"q": "%"}).json()[0]["name"] == "100% Cotton Towel"
+    assert len(client.get("/products", params={"q": "%"}).json()) == 1
+    assert client.get("/products", params={"q": "_"}).json() == []
+
+
+def test_search_combines_with_category_filter_and_pagination(client, admin_headers):
+    kitchen, sports = seed_search_data(client, admin_headers)
+    r = client.get("/products", params={"q": "mat", "category_id": kitchen["id"]})
+    assert names(r) == ["Door Mat"]
+    r = client.get("/products", params={"q": "mat", "limit": 1})
+    assert len(r.json()) == 1
+    r2 = client.get("/products", params={"q": "mat", "limit": 1, "skip": 1})
+    assert r2.json()[0]["id"] != r.json()[0]["id"]
+
+
+def test_search_does_not_duplicate_products(client, admin_headers):
+    seed_search_data(client, admin_headers)
+    assert len(client.get("/products", params={"q": "kitchen"}).json()) == 2

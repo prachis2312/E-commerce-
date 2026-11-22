@@ -11,8 +11,6 @@ const EMPTY_FORM = {
 
 const PAGE_SIZE = 20;
 
-const inputStyle = { display: "block", width: "100%", boxSizing: "border-box", padding: "0.4rem", marginBottom: "0.6rem" };
-
 function Admin() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -136,82 +134,115 @@ function Admin() {
   };
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "1rem" }}>
-      <h2>Admin Dashboard</h2>
+    <div className="page">
+      <div className="page-header">
+        <h2>Admin dashboard</h2>
+      </div>
 
       {message.text && (
-        <p style={{ color: message.type === "error" ? "red" : "green" }}>{message.text}</p>
+        <div className={`alert ${message.type === "error" ? "alert-error" : "alert-success"}`} role="status">
+          {message.text}
+        </div>
       )}
 
-      <section style={{ border: "1px solid #ccc", padding: "1rem", marginBottom: "1.5rem" }}>
-        <h3>{editingId ? `Edit product #${editingId}` : "Add a product"}</h3>
-        <form onSubmit={handleSubmit}>
-          <input style={inputStyle} name="name" placeholder="Name *" value={form.name} onChange={handleChange} required />
-          <textarea style={inputStyle} name="description" placeholder="Description" value={form.description} onChange={handleChange} rows={3} />
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <input style={inputStyle} name="price" type="number" step="0.01" min="0" placeholder="Price *" value={form.price} onChange={handleChange} required />
-            <input style={inputStyle} name="stock_quantity" type="number" min="0" step="1" placeholder="Stock *" value={form.stock_quantity} onChange={handleChange} required />
-          </div>
-          <input style={inputStyle} name="image_url" placeholder="Image URL (optional)" value={form.image_url} onChange={handleChange} />
-          <select style={inputStyle} name="category_id" value={form.category_id} onChange={handleChange}>
-            <option value="">No category</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-          <button type="submit" disabled={saving}>
-            {saving ? "Saving..." : editingId ? "Save changes" : "Add product"}
-          </button>
-          {editingId && (
-            <button type="button" onClick={resetForm} style={{ marginLeft: "0.5rem" }}>Cancel edit</button>
-          )}
-        </form>
+      <div className="admin-grid">
+        <section className="panel">
+          <h3>{editingId ? `Edit product #${editingId}` : "Add a product"}</h3>
+          <form onSubmit={handleSubmit}>
+            <div className="field">
+              <label htmlFor="name">Name</label>
+              <input id="name" className="input" name="name" value={form.name} onChange={handleChange} required />
+            </div>
+            <div className="field">
+              <label htmlFor="description">Description</label>
+              <textarea id="description" className="textarea" name="description" rows={3} value={form.description} onChange={handleChange} />
+            </div>
+            <div className="form-row">
+              <div className="field">
+                <label htmlFor="price">Price (₹)</label>
+                <input id="price" className="input" name="price" type="number" step="0.01" min="0" value={form.price} onChange={handleChange} required />
+              </div>
+              <div className="field">
+                <label htmlFor="stock_quantity">Stock</label>
+                <input id="stock_quantity" className="input" name="stock_quantity" type="number" min="0" step="1" value={form.stock_quantity} onChange={handleChange} required />
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="image_url">Image URL (optional)</label>
+              <input id="image_url" className="input" name="image_url" value={form.image_url} onChange={handleChange} />
+            </div>
+            <div className="field">
+              <label htmlFor="category_id">Category</label>
+              <select id="category_id" className="select" name="category_id" value={form.category_id} onChange={handleChange}>
+                <option value="">No category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="actions" style={{ justifyContent: "flex-start", marginTop: 0 }}>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? "Saving..." : editingId ? "Save changes" : "Add product"}
+              </button>
+              {editingId && (
+                <button type="button" className="btn btn-secondary" onClick={resetForm}>Cancel</button>
+              )}
+            </div>
+          </form>
+        </section>
 
-        <form onSubmit={handleAddCategory} style={{ marginTop: "1rem" }}>
-          <input
-            placeholder="New category name"
-            value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value)}
-            style={{ padding: "0.4rem" }}
-          />
-          <button type="submit" style={{ marginLeft: "0.5rem" }}>Add category</button>
-        </form>
-      </section>
-
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-        <h3 style={{ margin: 0 }}>Products</h3>
-        <button onClick={handleRefreshRecommendations} disabled={refreshing}>
-          {refreshing ? "Refreshing..." : "Refresh recommendations"}
-        </button>
-        <small>(Happens automatically after add/edit/delete; use this if recommendations look stale.)</small>
+        <section className="panel">
+          <h3>Add a category</h3>
+          <form onSubmit={handleAddCategory} className="form-row" style={{ alignItems: "flex-end" }}>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label htmlFor="new-category">Category name</label>
+              <input id="new-category" className="input" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} />
+            </div>
+            <button type="submit" className="btn btn-secondary" style={{ flex: "none" }}>Add category</button>
+          </form>
+        </section>
       </div>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ textAlign: "left", borderBottom: "2px solid #ccc" }}>
-            <th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((p) => (
-            <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
-              <td>{p.id}</td>
-              <td>{p.name}</td>
-              <td>{p.category?.name || "-"}</td>
-              <td>${p.price}</td>
-              <td style={{ color: p.stock_quantity === 0 ? "red" : "inherit" }}>{p.stock_quantity}</td>
-              <td>
-                <button onClick={() => handleEdit(p)}>Edit</button>
-                <button onClick={() => handleDelete(p)} style={{ marginLeft: "0.4rem" }}>Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {products.length === 0 && <p>No products on this page.</p>}
 
-      <div style={{ marginTop: "1rem" }}>
-        <button onClick={() => setSkip(Math.max(0, skip - PAGE_SIZE))} disabled={skip === 0}>Previous</button>
-        <button onClick={() => setSkip(skip + PAGE_SIZE)} disabled={products.length < PAGE_SIZE} style={{ marginLeft: "0.5rem" }}>Next</button>
+      <div className="page-header">
+        <h3 style={{ margin: 0 }}>Products</h3>
+        <div className="toolbar" style={{ margin: 0 }}>
+          <span className="muted">Recommendations update automatically.</span>
+          <button className="btn btn-secondary btn-sm" onClick={handleRefreshRecommendations} disabled={refreshing}>
+            {refreshing ? "Refreshing..." : "Refresh recommendations"}
+          </button>
+        </div>
+      </div>
+
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th></th></tr>
+          </thead>
+          <tbody>
+            {products.map((p) => (
+              <tr key={p.id}>
+                <td className="table-id">{p.id}</td>
+                <td>{p.name}</td>
+                <td>{p.category?.name || "-"}</td>
+                <td>₹{p.price}</td>
+                <td className={p.stock_quantity === 0 ? "stock-out" : ""}>{p.stock_quantity}</td>
+                <td>
+                  <div className="row-actions">
+                    <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(p)}>Edit</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p)}>Delete</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {products.length === 0 && <p className="muted" style={{ marginTop: "0.75rem" }}>No products on this page.</p>}
+
+      <div className="pagination">
+        <button className="btn btn-secondary" onClick={() => setSkip(Math.max(0, skip - PAGE_SIZE))} disabled={skip === 0}>Previous</button>
+        <span className="muted">Page {skip / PAGE_SIZE + 1}</span>
+        <button className="btn btn-secondary" onClick={() => setSkip(skip + PAGE_SIZE)} disabled={products.length < PAGE_SIZE}>Next</button>
       </div>
     </div>
   );

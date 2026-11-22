@@ -1,4 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Header, Query, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from typing import Optional, List
 import os
@@ -49,16 +50,29 @@ def list_products(
     max_price: Optional[float] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, le=100),
+    q: Optional[str] = Query(None, max_length=100, description="Search words (matches name, description, category)"),
     db: Session = Depends(get_db)
 ):
     query = db.query(Product)
+    if q and q.strip():
+        # Every word must match somewhere (name, description or category name),
+        # so "yoga mat" finds the yoga mat but not every mat or every yoga item.
+        query = query.outerjoin(Category, Product.category_id == Category.id)
+        for word in q.split()[:8]:
+            escaped = word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            pattern = f"%{escaped}%"
+            query = query.filter(or_(
+                Product.name.ilike(pattern, escape="\\"),
+                Product.description.ilike(pattern, escape="\\"),
+                Category.name.ilike(pattern, escape="\\"),
+            ))
     if category_id is not None:
         query = query.filter(Product.category_id == category_id)
     if min_price is not None:
         query = query.filter(Product.price >= min_price)
     if max_price is not None:
         query = query.filter(Product.price <= max_price)
-    return query.offset(skip).limit(limit).all()
+    return query.order_by(Product.id).offset(skip).limit(limit).all()
 
 @router.get("/products/{product_id}", response_model=ProductResponse)
 def get_product(product_id: int, db: Session = Depends(get_db)):

@@ -317,3 +317,7 @@ cd frontend && npm test
 ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=... python scripts/smoke_test.py
 ```
 
+### Search & UI
+- `GET /products?q=...` searches name, description and category (every word must match; case-insensitive; `%`/`_` are treated literally). Combines with category filter and pagination. The navbar search box sends you to `/products?q=...`, so searches are shareable URLs.
+- The UI uses a single stylesheet (`frontend/src/index.css`) with design tokens taken from the "Beige Red" palette; change the colours in the `:root` block to re-theme the whole site.
+

@@ -1,19 +1,24 @@
+// stock_quantity / category are optional: recommendation cards don't carry them,
+// so we simply don't show stock info there instead of showing something wrong.
 function ProductCard({ product }) {
+  const stock = product.stock_quantity;
+  const hasStock = typeof stock === "number";
+
   return (
-    <div style={{ border: "1px solid #ccc", padding: "1rem", width: "220px" }}>
-      {product.image_url && (
-        <img
-          src={product.image_url}
-          alt={product.name}
-          style={{ width: "100%", height: "150px", objectFit: "contain" }}
-        />
-      )}
-      <h4>{product.name}</h4>
-      <p>{product.category ? product.category.name : "Uncategorized"}</p>
-      <p><strong>₹{product.price}</strong></p>
-      <p style={{ color: product.stock_quantity > 0 ? "green" : "red" }}>
-        {product.stock_quantity > 0 ? `In stock (${product.stock_quantity})` : "Out of stock"}
-      </p>
+    <div className="product-card">
+      <div className="product-card-img">
+        {product.image_url && <img src={product.image_url} alt={product.name} loading="lazy" />}
+      </div>
+      <div className="product-card-body">
+        {product.category && <span className="chip">{product.category.name}</span>}
+        <h4 className="product-card-name">{product.name}</h4>
+        {hasStock && (
+          <span className={`stock ${stock === 0 ? "stock-out" : stock <= 5 ? "stock-low" : "stock-in"}`}>
+            {stock === 0 ? "Out of stock" : stock <= 5 ? `Only ${stock} left` : "In stock"}
+          </span>
+        )}
+        <div className="product-card-price">₹{product.price}</div>
+      </div>
     </div>
   );
 }
