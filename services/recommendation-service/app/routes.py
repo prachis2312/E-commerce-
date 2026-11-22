@@ -4,6 +4,7 @@ from app.database import get_db
 from app.models import ProductEmbedding
 from app.schemas import RecommendationResponse, SimilarProduct, RefreshResponse
 from app.embeddings import refresh_embeddings
+from app.service_clients import ProductFetchError
 from app import similarity
 from app.similarity import (
     load_cache_from_db, get_similar_products, get_recommendations_for_vector,
@@ -11,19 +12,28 @@ from app.similarity import (
 )
 from app.service_clients import get_product, get_user_order_history, get_all_products
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.auth import require_admin
+from app.auth import require_admin_or_internal
+import asyncio
 
 router = APIRouter()
 bearer_scheme = HTTPBearer()
+
+# Several product changes in a row would otherwise start overlapping refreshes
+# that could try to insert the same embedding twice.
+_refresh_lock = asyncio.Lock()
 
 
 @router.post("/recommendations/refresh", response_model=RefreshResponse)
 async def refresh(
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin)   # NEW — only admins can trigger this now
+    caller: dict = Depends(require_admin_or_internal)  # admin JWT or trusted service key
 ):
-    count = await refresh_embeddings(db)
-    load_cache_from_db(db)
+    async with _refresh_lock:
+        try:
+            count = await refresh_embeddings(db)
+        except ProductFetchError:
+            raise HTTPException(status_code=503, detail="Could not fetch products; embeddings left unchanged")
+        load_cache_from_db(db)
     return RefreshResponse(embeddings_processed=count, message="Embeddings refreshed successfully")
 
 

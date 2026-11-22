@@ -8,6 +8,35 @@ PRODUCT_SERVICE_URL = os.getenv("PRODUCT_SERVICE_URL", "http://product-service:8
 ORDER_SERVICE_URL = os.getenv("ORDER_SERVICE_URL", "http://order-service:8004")
 
 
+class ProductFetchError(Exception):
+    """Raised when the full product list could not be fetched reliably."""
+
+
+async def get_all_products_strict():
+    """Like get_all_products, but raises instead of silently returning a partial list.
+    Needed for refresh: a partial list must never be mistaken for 'these products were deleted'."""
+    all_products = []
+    skip = 0
+    limit = 100
+    async with httpx.AsyncClient() as client:
+        while True:
+            try:
+                response = await client.get(
+                    f"{PRODUCT_SERVICE_URL}/products",
+                    params={"skip": skip, "limit": limit},
+                    timeout=10.0,
+                )
+            except httpx.RequestError as exc:
+                raise ProductFetchError(str(exc)) from exc
+            if response.status_code != 200:
+                raise ProductFetchError(f"product-service returned {response.status_code}")
+            batch = response.json()
+            all_products.extend(batch)
+            if len(batch) < limit:
+                return all_products
+            skip += limit
+
+
 async def get_all_products():
     """Fetch all products from product-service, handling pagination."""
     all_products = []

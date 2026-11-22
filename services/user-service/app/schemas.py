@@ -26,4 +26,9 @@ class UserResponse(BaseModel):
 # What we send back after successful login
 class Token(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
+
+# Body for /auth/refresh and /auth/logout
+class RefreshRequest(BaseModel):
+    refresh_token: str

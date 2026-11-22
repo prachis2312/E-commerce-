@@ -4,7 +4,6 @@ import { getProduct } from "../api/products";
 import { getSimilarProducts } from "../api/recommendations";
 import ProductCard from "../components/ProductCard";
 import { useCart } from "../context/CartContext";
-import { buyNow } from "../api/orders";
 import { useNavigate } from "react-router-dom";
 
 
@@ -20,7 +19,6 @@ function ProductDetail() {
   const [adding, setAdding] = useState(false);
 
   const navigate = useNavigate();
-  const [buyingNow, setBuyingNow] = useState(false);
   const [quantity, setQuantity] = useState(1);
 
 
@@ -36,6 +34,7 @@ function ProductDetail() {
   useEffect(() => {
     setLoading(true);
     setError("");
+    setQuantity(1);
 
     getProduct(productId)
       .then((res) => setProduct(res.data))
@@ -63,76 +62,79 @@ function ProductDetail() {
     }
   };
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p style={{ color: "red" }}>{error}</p>;
+  if (loading) return <div className="page"><p className="muted">Loading product...</p></div>;
+  if (error) {
+    return (
+      <div className="page">
+        <div className="alert alert-error">{error}</div>
+        <Link to="/products" className="btn btn-secondary">Back to products</Link>
+      </div>
+    );
+  }
   if (!product) return null;
 
+  const inStock = product.stock_quantity > 0;
+
   return (
-    <div>
-    <Link to="/products">← Back to Products</Link>
+    <div className="page">
+      <Link to="/products" className="back-link">← Back to products</Link>
 
-    <div style={{ display: "flex", gap: "2rem", marginTop: "1rem" }}>
-      {product.image_url && (
-        <img src={product.image_url} alt={product.name} style={{ width: "300px", objectFit: "contain" }} />
-      )}
-      <div>
-        <h2>{product.name}</h2>
-        <p>{product.category ? product.category.name : "Uncategorized"}</p>
-        <p><strong>₹{product.price}</strong></p>
-        <p style={{ color: product.stock_quantity > 0 ? "green" : "red" }}>
-          {product.stock_quantity > 0 ? `In stock (${product.stock_quantity})` : "Out of stock"}
-        </p>
-        <p>{product.description}</p>
-
-        <div style={{ margin: "0.5rem 0" }}>
-          <label>
-            Quantity:{" "}
-            <input
-              type="number"
-              min="1"
-              max={product.stock_quantity}
-              value={quantity}
-              onChange={(e) => {
-                const val = parseInt(e.target.value) || 1;
-                setQuantity(Math.min(Math.max(val, 1), product.stock_quantity));
-              }}
-              style={{ width: "60px" }}
-            />
-          </label>
+      <div className="detail">
+        <div className="detail-img">
+          {product.image_url && <img src={product.image_url} alt={product.name} />}
         </div>
 
-        <button onClick={handleAddToCart} disabled={product.stock_quantity === 0 || adding}>
-          {adding ? "Adding..." : "Add to Cart"}
-        </button>
-        <button onClick={handleBuyNow} disabled={product.stock_quantity === 0} style={{ marginLeft: "0.5rem" }}>
-          Buy Now
-        </button>
-        {addError && <p style={{ color: "red" }}>{addError}</p>}
-      </div>
-    </div>
+        <div>
+          {product.category && <span className="chip">{product.category.name}</span>}
+          <h2 style={{ marginTop: "0.5rem" }}>{product.name}</h2>
+          <div className="detail-price">₹{product.price}</div>
+          <span className={`stock ${!inStock ? "stock-out" : product.stock_quantity <= 5 ? "stock-low" : "stock-in"}`}>
+            {!inStock ? "Out of stock" : product.stock_quantity <= 5 ? `Only ${product.stock_quantity} left` : `In stock (${product.stock_quantity} available)`}
+          </span>
+          <p className="detail-desc">{product.description}</p>
 
-    {similar.length > 0 && (
-        <div style={{ marginTop: "2rem" }}>
-          <h3>Similar Products</h3>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
-            {similar.map((item) => (
-              <Link
-                key={item.product_id}
-                to={`/products/${item.product_id}`}
-                style={{ textDecoration: "none", color: "inherit" }}
-              >
-                <ProductCard
-                  product={{
-                    name: item.name,
-                    price: item.price,
-                    image_url: item.image_url,
-                    stock_quantity: 1,
+          {inStock && (
+            <div className="buy-row">
+              <label className="qty">
+                Quantity
+                <input
+                  className="input input-qty"
+                  type="number"
+                  min="1"
+                  max={product.stock_quantity}
+                  value={quantity}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 1;
+                    setQuantity(Math.min(Math.max(val, 1), product.stock_quantity));
                   }}
                 />
+              </label>
+            </div>
+          )}
+
+          <div className="buy-row">
+            <button className="btn btn-primary" onClick={handleAddToCart} disabled={!inStock || adding}>
+              {adding ? "Adding..." : "Add to cart"}
+            </button>
+            <button className="btn btn-secondary" onClick={handleBuyNow} disabled={!inStock}>
+              Buy now
+            </button>
+          </div>
+          {addError && <div className="alert alert-error">{addError}</div>}
+        </div>
+      </div>
+
+      {similar.length > 0 && (
+        <section>
+          <h3 className="section-title">Similar products</h3>
+          <div className="product-grid">
+            {similar.map((item) => (
+              <Link key={item.product_id} to={`/products/${item.product_id}`} className="product-link">
+                <ProductCard product={{ name: item.name, price: item.price, image_url: item.image_url }} />
               </Link>
             ))}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

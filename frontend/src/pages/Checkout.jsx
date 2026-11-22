@@ -19,9 +19,13 @@ function Checkout() {
   // Buy Now mode has its own product regardless of cart state.
   if (!isBuyNow && (!cart || cart.items.length === 0)) {
     return (
-      <div>
+      <div className="page page-medium">
         <h2>Checkout</h2>
-        <p>Your cart is empty. <Link to="/products">Browse products</Link></p>
+        <div className="empty">
+          <h3>Your cart is empty</h3>
+          <p>There is nothing to check out yet.</p>
+          <Link to="/products" className="btn btn-primary">Browse products</Link>
+        </div>
       </div>
     );
   }
@@ -51,47 +55,48 @@ function Checkout() {
     }
   };
 
+  const lines = isBuyNow
+    ? [{ id: "buy-now", name: buyNowItem.product.name, quantity: buyNowItem.quantity, total: buyNowItem.product.price * buyNowItem.quantity }]
+    : cart.items.map((item) => ({ id: item.id, name: item.product_name, quantity: item.quantity, total: item.price_at_add * item.quantity }));
+  const grandTotal = isBuyNow ? (buyNowItem.product.price * buyNowItem.quantity).toFixed(2) : cart.total;
+
   return (
-    <div>
+    <div className="page page-medium">
       <h2>Checkout</h2>
 
-      <h3>Order Summary</h3>
-      {isBuyNow ? (
-        <div>
-          {buyNowItem.product.name} × {buyNowItem.quantity} — ₹
-          {(buyNowItem.product.price * buyNowItem.quantity).toFixed(2)}
-        </div>
-      ) : (
-        cart.items.map((item) => (
-          <div key={item.id}>
-            {item.product_name} × {item.quantity} — ₹{(item.price_at_add * item.quantity).toFixed(2)}
+      <div className="panel">
+        <h3>Order summary</h3>
+        {lines.map((line) => (
+          <div key={line.id} className="summary-line">
+            <span>{line.name} × {line.quantity}</span>
+            <span>₹{line.total.toFixed(2)}</span>
           </div>
-        ))
-      )}
-
-      <h3>
-        Total: ₹
-        {isBuyNow
-          ? (buyNowItem.product.price * buyNowItem.quantity).toFixed(2)
-          : cart.total}
-      </h3>
-
-      <div style={{ marginTop: "1rem" }}>
-        <label>
-          Payment Method:{" "}
-          <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-            <option value="card">Card</option>
-            <option value="upi">UPI</option>
-            <option value="cod">Cash on Delivery</option>
-          </select>
-        </label>
+        ))}
+        <div className="summary-total">
+          <span>Total</span>
+          <span>₹{grandTotal}</span>
+        </div>
       </div>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      <div className="panel" style={{ marginTop: "1.25rem" }}>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label htmlFor="payment">Payment method</label>
+          <select id="payment" className="select" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+            <option value="card">Card</option>
+            <option value="upi">UPI</option>
+            <option value="cod">Cash on delivery</option>
+          </select>
+        </div>
+      </div>
 
-      <button onClick={handlePlaceOrder} disabled={processing} style={{ marginTop: "1rem" }}>
-        {processing ? "Processing payment..." : "Place Order"}
-      </button>
+      {error && <div className="alert alert-error" role="alert" style={{ marginTop: "1.25rem" }}>{error}</div>}
+
+      <div className="actions">
+        <Link to={isBuyNow ? "/products" : "/cart"} className="btn btn-secondary">Back</Link>
+        <button className="btn btn-primary" onClick={handlePlaceOrder} disabled={processing}>
+          {processing ? "Processing payment..." : "Place order"}
+        </button>
+      </div>
     </div>
   );
 }

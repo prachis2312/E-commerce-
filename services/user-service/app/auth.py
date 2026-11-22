@@ -2,7 +2,9 @@ from datetime import datetime, timedelta
 from jose import jwt
 from passlib.context import CryptContext
 from dotenv import load_dotenv
-import os   
+import os
+import secrets
+import hashlib
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -16,7 +18,10 @@ bearer_scheme = HTTPBearer()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+# Short-lived access token: if it leaks, it is useless within minutes.
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
+# Long-lived refresh token: lives in the DB, can be revoked, rotated on every use.
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -34,6 +39,13 @@ def create_access_token(data: dict):
 
 
 
+
+def generate_refresh_token() -> str:
+    """Opaque random string (not a JWT) - the server looks it up in the DB."""
+    return secrets.token_urlsafe(48)
+
+def hash_refresh_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
     token = credentials.credentials

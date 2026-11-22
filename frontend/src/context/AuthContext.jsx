@@ -1,37 +1,48 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { decodeToken } from "../utils/jwt";
+import { tokenStore } from "../api/client";
+import { logoutUser } from "../api/auth";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => sessionStorage.getItem("token"));
-  const [user, setUser] = useState(() => {
-    const existingToken = sessionStorage.getItem("token");
-    return existingToken ? decodeToken(existingToken) : null;
-  });
+  const [token, setToken] = useState(() => tokenStore.getAccess());
 
+  // The axios interceptor refreshes tokens behind the scenes and announces it
+  // with an "auth:changed" event; the "storage" event covers other browser tabs.
   useEffect(() => {
-    if (token) {
-      sessionStorage.setItem("token", token);
-      setUser(decodeToken(token));
-    } else {
-      sessionStorage.removeItem("token");
-      setUser(null);
-    }
-  }, [token]);
+    const sync = () => setToken(tokenStore.getAccess());
+    window.addEventListener("auth:changed", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("auth:changed", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
-  const login = (accessToken) => {
-    setToken(accessToken); // user gets set automatically by the effect above
+  const user = useMemo(() => (token ? decodeToken(token) : null), [token]);
+
+  const login = (accessToken, refreshToken) => {
+    tokenStore.set(accessToken, refreshToken);
   };
 
-  const logout = () => {
-    setToken(null);
+  const logout = async () => {
+    const refreshToken = tokenStore.getRefresh();
+    tokenStore.clear(); // log out locally right away
+    if (refreshToken) {
+      try {
+        await logoutUser(refreshToken); // ...and revoke it on the server
+      } catch {
+        // Server unreachable: the token still expires on its own.
+      }
+    }
   };
 
   const value = {
     token,
     user,
     isAuthenticated: !!token,
+    isAdmin: !!user?.is_admin,
     login,
     logout,
   };

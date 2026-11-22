@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Header, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Header, Query, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from typing import Optional, List
 import os
 from app.database import get_db
 from app.models import Product, Category
 from app.auth import require_admin
+from app.notify import notify_recommendations
 from app.schemas import (
     ProductCreate, ProductUpdate, ProductResponse,
     CategoryCreate, CategoryResponse, StockUpdate,
@@ -33,11 +35,12 @@ def list_categories(db: Session = Depends(get_db)):
 # ---- Product routes ----
 
 @router.post("/products", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
-def create_product(product: ProductCreate, db: Session = Depends(get_db),admin: dict = Depends(require_admin)):
+def create_product(product: ProductCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db),admin: dict = Depends(require_admin)):
     new_product = Product(**product.model_dump())
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
+    background_tasks.add_task(notify_recommendations)
     return new_product
 
 @router.get("/products", response_model=List[ProductResponse])
@@ -47,16 +50,29 @@ def list_products(
     max_price: Optional[float] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, le=100),
+    q: Optional[str] = Query(None, max_length=100, description="Search words (matches name, description, category)"),
     db: Session = Depends(get_db)
 ):
     query = db.query(Product)
+    if q and q.strip():
+        # Every word must match somewhere (name, description or category name),
+        # so "yoga mat" finds the yoga mat but not every mat or every yoga item.
+        query = query.outerjoin(Category, Product.category_id == Category.id)
+        for word in q.split()[:8]:
+            escaped = word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            pattern = f"%{escaped}%"
+            query = query.filter(or_(
+                Product.name.ilike(pattern, escape="\\"),
+                Product.description.ilike(pattern, escape="\\"),
+                Category.name.ilike(pattern, escape="\\"),
+            ))
     if category_id is not None:
         query = query.filter(Product.category_id == category_id)
     if min_price is not None:
         query = query.filter(Product.price >= min_price)
     if max_price is not None:
         query = query.filter(Product.price <= max_price)
-    return query.offset(skip).limit(limit).all()
+    return query.order_by(Product.id).offset(skip).limit(limit).all()
 
 @router.get("/products/{product_id}", response_model=ProductResponse)
 def get_product(product_id: int, db: Session = Depends(get_db)):
@@ -66,7 +82,7 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
     return product
 
 @router.put("/products/{product_id}", response_model=ProductResponse)
-def update_product(product_id: int, updates: ProductUpdate, db: Session = Depends(get_db),admin: dict = Depends(require_admin)):
+def update_product(product_id: int, updates: ProductUpdate, background_tasks: BackgroundTasks, db: Session = Depends(get_db),admin: dict = Depends(require_admin)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -77,6 +93,7 @@ def update_product(product_id: int, updates: ProductUpdate, db: Session = Depend
 
     db.commit()
     db.refresh(product)
+    background_tasks.add_task(notify_recommendations)
     return product
 
 @router.patch("/products/{product_id}/stock", response_model=ProductResponse)
@@ -159,10 +176,11 @@ def release_stock(
     return {"success": True, "remaining_stock": product.stock_quantity}
 
 @router.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_product(product_id: int, db: Session = Depends(get_db),admin: dict = Depends(require_admin)):
+def delete_product(product_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db),admin: dict = Depends(require_admin)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     db.delete(product)
     db.commit()
+    background_tasks.add_task(notify_recommendations)
     return None

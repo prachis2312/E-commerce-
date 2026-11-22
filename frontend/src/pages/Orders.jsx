@@ -2,6 +2,14 @@ import { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { getOrders } from "../api/orders";
 
+const statusLabel = (value) => String(value).replace(/_/g, " ").toLowerCase();
+const paymentClass = (value) => {
+  const v = String(value).toLowerCase();
+  if (v.includes("paid") || v.includes("success") || v.includes("complete")) return "pill pill-ok";
+  if (v.includes("fail")) return "pill pill-bad";
+  return "pill";
+};
+
 function Orders() {
   const location = useLocation();
   const justPlaced = location.state?.justPlaced;
@@ -13,41 +21,48 @@ function Orders() {
   useEffect(() => {
     getOrders()
       .then((res) => setOrders(res.data))
-      .catch(() => setError("Failed to load orders."))
+      .catch(() => setError("Could not load your orders."))
       .finally(() => setLoading(false));
   }, []);
 
   return (
-    <div>
-      <h2>Your Orders</h2>
+    <div className="page page-medium">
+      <h2>Your orders</h2>
 
       {justPlaced && (
-        <div style={{ border: "2px solid green", padding: "1rem", marginBottom: "1rem" }}>
-          <h3>Order Confirmed! 🎉</h3>
-          <p>Order #{justPlaced.id} — ₹{justPlaced.total_amount}</p>
-          <p>Status: {justPlaced.status} | Payment: {justPlaced.payment_status}</p>
+        <div className="confirm-banner" role="status">
+          <h3>Order placed</h3>
+          <p>Order #{justPlaced.id} for ₹{justPlaced.total_amount} is confirmed.</p>
         </div>
       )}
 
-      {loading && <p>Loading...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {loading && <p className="muted">Loading orders...</p>}
+      {error && <div className="alert alert-error">{error}</div>}
 
-      {!loading && orders.length === 0 && (
-        <p>No orders yet. <Link to="/products">Start shopping</Link></p>
+      {!loading && !error && orders.length === 0 && (
+        <div className="empty">
+          <h3>No orders yet</h3>
+          <p>When you place an order it will appear here.</p>
+          <Link to="/products" className="btn btn-primary">Start shopping</Link>
+        </div>
       )}
 
       {orders.map((order) => (
-        <div key={order.id} style={{ border: "1px solid #444", padding: "1rem", marginBottom: "1rem" }}>
-          <p><strong>Order #{order.id}</strong> — {new Date(order.created_at).toLocaleDateString()}</p>
-          <p>Status: {order.status} | Payment: {order.payment_status}</p>
-          <ul>
+        <div key={order.id} className="panel order-card">
+          <div className="order-head">
+            <strong>Order #{order.id}</strong>
+            <span className="muted">{new Date(order.created_at).toLocaleDateString()}</span>
+          </div>
+          <div>
+            <span className="pill">{statusLabel(order.status)}</span>
+            <span className={paymentClass(order.payment_status)}>payment {statusLabel(order.payment_status)}</span>
+          </div>
+          <ul className="order-items">
             {order.items.map((item) => (
-              <li key={item.id}>
-                {item.product_name} × {item.quantity} — ₹{item.price_at_order} each
-              </li>
+              <li key={item.id}>{item.product_name} × {item.quantity} — ₹{item.price_at_order} each</li>
             ))}
           </ul>
-          <p><strong>Total: ₹{order.total_amount}</strong></p>
+          <strong>Total ₹{order.total_amount}</strong>
         </div>
       ))}
     </div>
