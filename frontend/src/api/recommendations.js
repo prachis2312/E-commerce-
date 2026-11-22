@@ -11,3 +11,7 @@ export const getRecommendationsForUser = (userId, topN = 5) => {
     params: { top_n: topN },
   });
 };
+// Admin only: re-embed new/changed products and drop deleted ones.
+export const refreshRecommendations = () => {
+  return apiClient.post("/recommendations/recommendations/refresh", null, { timeout: 120000 });
+};

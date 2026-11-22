@@ -300,7 +300,7 @@ Prachi Saxena
 - Log in normally; admins are sent to `/admin` where they can add/edit/delete products, change stock and add categories. Authorization is enforced by the backend (`require_admin` -> 403); the UI route guard is only a convenience.
 
 ### Seeding the catalog
-`docker compose exec product-service python seed_products.py` (idempotent, 100+ products in 9 categories). Then refresh embeddings with an admin token: `POST /api/recommendations/recommendations/refresh`.
+`docker compose exec product-service python seed_products.py` (idempotent, 100+ products in 9 categories). Embeddings are kept in sync automatically: whenever an admin adds, edits or deletes a product, product-service notifies recommendation-service in the background (best-effort, authenticated with the internal API key). Refresh also deletes embeddings of removed products and refuses to touch anything if the product list can't be fetched completely. The admin page has a manual **Refresh recommendations** button as a fallback.
 
 ### Tests
 ```bash
@@ -308,6 +308,7 @@ Prachi Saxena
 pip install -r requirements-dev.txt
 cd services/user-service && python -m pytest tests -q
 cd ../product-service && python -m pytest tests -q
+cd ../recommendation-service && pip install numpy && python -m pytest tests -q
 
 # frontend tests (refresh-token interceptor)
 cd frontend && npm test

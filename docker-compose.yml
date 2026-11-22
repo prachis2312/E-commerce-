@@ -53,6 +53,7 @@ services:
       SECRET_KEY: your-secret-key-change-this-later
       ALGORITHM: HS256
       INTERNAL_API_KEY: some-long-random-string-here
+      RECOMMENDATION_SERVICE_URL: http://recommendation-service:8005
     depends_on:
       - product-postgres
     networks:
@@ -144,6 +145,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres123@recommendation-postgres:5432/recommendation_service_db
       SECRET_KEY: your-secret-key-change-this-later
       ALGORITHM: HS256
+      INTERNAL_API_KEY: some-long-random-string-here
       PRODUCT_SERVICE_URL: http://product-service:8002
       ORDER_SERVICE_URL: http://order-service:8004
     depends_on:

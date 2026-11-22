@@ -1,7 +1,7 @@
 from sentence_transformers import SentenceTransformer
 from sqlalchemy.orm import Session
 from app.models import ProductEmbedding
-from app.service_clients import get_all_products
+from app.service_clients import get_all_products_strict
 import hashlib
 
 # Loaded once at module import time - reused across all requests
@@ -32,13 +32,13 @@ def _hash_text(text: str) -> str:
 async def refresh_embeddings(db: Session) -> int:
     """
     Fetches all products, computes embeddings ONLY for those that are new
-    or whose text has changed since the last run (detected via a content
+    or whose text has changed since the last run, and deletes embeddings of removed products (detected via a content
     hash) — skipping the expensive model.encode() call entirely for
     unchanged products. Returns count of embeddings actually processed
     (i.e., newly computed), not the total product count.
     """
     model = get_model()
-    products = await get_all_products()
+    products = await get_all_products_strict()  # raises if the list can't be fetched completely
 
     existing = {pe.product_id: pe for pe in db.query(ProductEmbedding).all()}
 
@@ -68,6 +68,13 @@ async def refresh_embeddings(db: Session) -> int:
             db.add(new_embedding)
 
         processed += 1
+
+    # Remove embeddings of products that no longer exist (deleted by an admin),
+    # so they can't show up in recommendations and lead to dead links.
+    live_ids = {p["id"] for p in products}
+    for product_id, record in existing.items():
+        if product_id not in live_ids:
+            db.delete(record)
 
     db.commit()
     return processed

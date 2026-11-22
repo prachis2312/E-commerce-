@@ -3,6 +3,7 @@ import {
   getProducts, getCategories,
   createProduct, updateProduct, deleteProduct, createCategory,
 } from "../api/products";
+import { refreshRecommendations } from "../api/recommendations";
 
 const EMPTY_FORM = {
   name: "", description: "", price: "", stock_quantity: "", image_url: "", category_id: "",
@@ -21,6 +22,7 @@ function Admin() {
   const [newCategory, setNewCategory] = useState("");
   const [message, setMessage] = useState({ type: "", text: "" });
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadProducts = useCallback(() => {
     return getProducts({ skip, limit: PAGE_SIZE })
@@ -108,6 +110,18 @@ function Admin() {
     }
   };
 
+  const handleRefreshRecommendations = async () => {
+    setRefreshing(true);
+    try {
+      const res = await refreshRecommendations();
+      setMessage({ type: "ok", text: `Recommendations updated (${res.data.embeddings_processed} product(s) re-embedded).` });
+    } catch (err) {
+      setMessage({ type: "error", text: errorText(err, "Could not refresh recommendations.") });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleAddCategory = async (e) => {
     e.preventDefault();
     if (!newCategory.trim()) return;
@@ -164,7 +178,13 @@ function Admin() {
         </form>
       </section>
 
-      <h3>Products</h3>
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <h3 style={{ margin: 0 }}>Products</h3>
+        <button onClick={handleRefreshRecommendations} disabled={refreshing}>
+          {refreshing ? "Refreshing..." : "Refresh recommendations"}
+        </button>
+        <small>(Happens automatically after add/edit/delete; use this if recommendations look stale.)</small>
+      </div>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ textAlign: "left", borderBottom: "2px solid #ccc" }}>

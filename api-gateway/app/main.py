@@ -58,7 +58,7 @@ async def proxy(service: str, path: str, request: Request):
                 params=request.query_params,
                 headers=forwarded_headers,
                 content=body,
-                timeout=10.0
+                timeout=120.0  # embedding refresh can take a while
             )
         except httpx.RequestError:
             raise HTTPException(status_code=503, detail=f"Service '{service}' is unavailable")

@@ -127,3 +127,31 @@ def test_release_stock_restores_quantity(client, admin_headers, internal_headers
 def test_reserve_missing_product_404(client, internal_headers):
     r = client.post("/products/9999/reserve-stock", json={"quantity": 1}, headers=internal_headers)
     assert r.status_code == 404
+
+
+# ---------- recommendation sync ----------
+
+def test_product_changes_notify_recommendation_service(client, admin_headers, monkeypatch):
+    calls = []
+    monkeypatch.setattr("app.routes.notify_recommendations", lambda: calls.append(1))
+
+    p = create_product(client, admin_headers)
+    assert len(calls) == 1
+    client.put(f"/products/{p['id']}", json={"price": 3}, headers=admin_headers)
+    assert len(calls) == 2
+    client.delete(f"/products/{p['id']}", headers=admin_headers)
+    assert len(calls) == 3
+
+
+def test_recommendation_outage_never_blocks_product_creation(client, admin_headers, monkeypatch):
+    import app.notify as notify
+    monkeypatch.setattr(notify.requests, "post", lambda *a, **k: (_ for _ in ()).throw(ConnectionError("down")))
+    r = client.post("/products", json=PRODUCT, headers=admin_headers)
+    assert r.status_code == 201
+
+
+def test_failed_create_does_not_notify(client, user_headers, monkeypatch):
+    calls = []
+    monkeypatch.setattr("app.routes.notify_recommendations", lambda: calls.append(1))
+    client.post("/products", json=PRODUCT, headers=user_headers)  # 403
+    assert calls == []
